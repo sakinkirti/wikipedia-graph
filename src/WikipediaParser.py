@@ -1,6 +1,3 @@
-import numpy as np
-import pandas as pd
-
 import wikipedia as wiki
 
 class WikipediaParser:
@@ -16,7 +13,8 @@ class WikipediaParser:
         # set the wikipedia language
         wiki.set_lang(lang)
 
-    def parse_wikipedia(self, term: str, num_results:int=1):
+    @staticmethod
+    def parse_wikipedia(term: str):
         """
         method to parse wikipedia based on a search term
         
@@ -28,15 +26,16 @@ class WikipediaParser:
         """
 
         # search wikipedia
-        titles = wiki.search(query=term, results=num_results)
+        titles = wiki.search(query=term, results=1)
 
         # pick the top result and generate wikipedia page
-        pages = [wiki.WikipediaPage(title=t) for t in titles]
+        page = wiki.WikipediaPage(title=titles[0])
 
         # return the relevant
-        return pages
+        return page
 
-    def parse_links(self, page: wiki.WikipediaPage):
+    @staticmethod
+    def find_links(page: wiki.WikipediaPage):
         """
         method to get the links based on a wikipedia page
         
