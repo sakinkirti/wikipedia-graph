@@ -1,2 +1,2 @@
-# medical-graph-database
-a program that mines data from PubMed and stores it as cause and effect relationships as a DAG
+# wikipedia-graph
+a program that scrapes wikipedia to generate a graph based on input
