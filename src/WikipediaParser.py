@@ -16,7 +16,7 @@ class WikipediaParser:
         # set the wikipedia language
         wiki.set_lang(lang)
 
-    def parse_wikipedia(self, term: str, num_results:int=10):
+    def parse_wikipedia(self, term: str, num_results:int=1):
         """
         method to parse wikipedia based on a search term
         
@@ -24,18 +24,28 @@ class WikipediaParser:
         term: str - the term to search for
         
         return:
+        wiki.WikipediaPage - the page(s) of the search term for the number of results
         """
 
         # search wikipedia
-        res = wiki.search(query=term, results=num_results)
+        titles = wiki.search(query=term, results=num_results)
 
         # pick the top result and generate wikipedia page
-        page = wiki.WikipediaPage(title=res[0])
+        pages = [wiki.WikipediaPage(title=t) for t in titles]
 
-        # find links to other wikipedia pages
-        links = page.links
+        # return the relevant
+        return pages
+
+    def parse_links(self, page: wiki.WikipediaPage):
+        """
+        method to get the links based on a wikipedia page
         
-        return (page, links)
+        params:
+        page: wiki.WikipediaPage - the page to get links of
+        
+        return:
+        list - titles of the linked pages
+        """
 
-parser = WikipediaParser("en")
-print(parser.parse_wikipedia("covid", 10))
+        # get links and return
+        return page.links

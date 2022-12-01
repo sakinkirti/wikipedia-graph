@@ -2,12 +2,15 @@ import networkx as nx
 import neo4j
 import nxneo4j
 
-class WikipediaGraph(nx.DiGraph):
+class WikipediaGraph(nxneo4j.DiGraph):
     """
     author: Sakin Kirti and Smyan Thota
     date: 12/01/2022
 
     class, based on a NetworkX DiGraph, to represent the links between wikipedia articles.
+
+    contains:
+    SubClass: WikipediaGraph.WikiNode
     """
 
     def __init__(self, incoming_graph_data=None, **attr):
@@ -27,3 +30,14 @@ class WikipediaGraph(nx.DiGraph):
 
         # call DiGraph's add_node method
         super().add_node(node_for_adding, **attr)
+
+    class WikiNode:
+        """
+        authors: Sakin Kirti and Smyan Thota
+        date: 12/01/2022
+        
+        custom class to design a wikipedia node
+        """
+
+        def __init__(self, title: str, ) -> None:
+            pass
