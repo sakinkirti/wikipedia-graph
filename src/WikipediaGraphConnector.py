@@ -177,6 +177,45 @@ class WikipediaGraphConnector:
 
         return self.graph.copy()
 
+    def find_descendants(self, node: str):
+        """
+        method to find the descendants from a certain node
+        
+        params:
+        node: str - the node to search from
+        
+        return:
+        set - the set of nodes
+        """
+
+        return nx.descendants(self.graph, node)
+
+    def find_neighbors(self, node: str):
+        """
+        method to find the direct neighbors of a node
+        
+        params:
+        node: str - the node to find neighbors of
+        
+        return:
+        set - the set of nodes
+        """
+
+        return self.graph[node]
+
+    def find_ancestors(self, node: str):
+        """
+        method to find the ancestors of a specific node
+        
+        params:
+        node: the node to find ancestors of
+        
+        return:
+        set - the set of nodes
+        """
+
+        return nx.ancestors(self.graph, node)
+
     class WikiNode:
         """
         author: Sakin Kirti and Smyan Thota
