@@ -59,7 +59,7 @@ class WikipediaGraphConnector:
 
         self.driver.close()
 
-    def add_nodes(self, nodes: list, add_edges: bool=False, depth: int=2):
+    def add_nodes(self, nodes: list[str], add_links: bool=False, depth: int=0):
         """
         method to add nodes and edges to the graph
         
@@ -73,13 +73,39 @@ class WikipediaGraphConnector:
         """
 
         # add the nodes to the graph
-        neo4j_nodes = [self.WikiNode(n) for n in nodes]
-        for nxn in neo4j_nodes:
+        for n in nodes:
+            nxn = self.WikiNode(n)
             self.graph.add_node(nxn.get_title(), nxn.get_properties())
 
-        # if add_edges is True, add edges (+ new nodes) recursively
-        if add_edges == True:
-            add_edges = True # replace
+            # if add_edges is True, add edges (+ new nodes) recursively
+            if add_links == True:
+                self.__add_nodes_edges_recursively(node=nxn, links=nxn.get_properties()["links"], depth=depth)
+
+    def __add_nodes_edges_recursively(self, parent: any, links: list[str], depth: int):
+        """
+        method to add nodes and edges recursively
+        
+        params:
+        node: WikipediaGraphConnector.WikiNode - the name of the parent node to add
+        links: list - list of names of nodes to direct to from node
+        depth: int - to depth to go to from here
+        
+        return:
+        None
+        """
+
+        # add the link nodes and link to its parent
+        if depth > 0:
+            # add link nodes
+            for l in links:
+                nxn = self.WikiNode(l)
+                self.graph.add_node(nxn.get_title(), nxn.get_properties())
+
+                # add the appropriate edge
+                self.graph.add_edge(parent.get_title(), nxn.get_title())
+
+                # add the next set depth-first edge
+                self.__add_nodes_edges_recursively(parent=nxn, links=nxn.get_properties()["links"], depth=depth-1)
 
     class WikiNode:
         """
