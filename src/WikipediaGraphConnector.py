@@ -74,12 +74,13 @@ class WikipediaGraphConnector:
 
         # add the nodes to the graph
         for n in nodes:
-            nxn = self.WikiNode(n)
-            self.graph.add_node(nxn.get_title(), nxn.get_properties())
+            if self.graph.has_node(n) == False:
+                nxn = self.WikiNode(n)
+                self.graph.add_node(nxn.get_title(), nxn.get_properties())
 
-            # if add_edges is True, add edges (+ new nodes) recursively
-            if add_links == True:
-                self.__add_nodes_edges_recursively(node=nxn, links=nxn.get_properties()["links"], depth=depth)
+                # if add_edges is True, add edges (+ new nodes) recursively
+                if add_links == True:
+                    self.__add_nodes_edges_recursively(node=nxn, links=nxn.get_properties()["links"], depth=depth)
 
     def __add_nodes_edges_recursively(self, parent: any, links: list[str], depth: int):
         """
@@ -130,6 +131,51 @@ class WikipediaGraphConnector:
                     raise self.LinkDoesNotExistError(f"The link from {edge[0]} to {edge[1]} does not exist")
             else:
                 raise self.NodeDoesNotExistError(f"At least one of the nodes specified in {edge} does not exist")
+
+    def add_descendants(self, node: str, depth: int=1):
+        """
+        add links/children for an already defined node
+        
+        params:
+        node: str - the node to add descendants for
+        depth: int - the number of generations to add
+        
+        return:
+        None
+        """
+
+        # check if node exists, then add edges
+        if self.graph.has_node(node):
+            nxn = self.WikiNode(node)
+            self.__add_nodes_edges_recursively(parent=nxn, links=nxn.get_properties()["links"], depth=depth)
+        else:
+            raise self.NodeDoesNotExistError(f"The noode {node} does not exist")
+
+    def visualize(self):
+        """
+        method to visualize the graph
+        
+        params:
+        None
+        
+        return:
+        None
+        """
+
+        nx.draw(self.graph)
+
+    def get_nodes(self):
+        """
+        method to get and access node properties
+        
+        params:
+        None
+        
+        returns:
+        nxneo4j.graph
+        """
+
+        return self.graph.copy()
 
     class WikiNode:
         """
