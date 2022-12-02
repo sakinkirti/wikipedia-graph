@@ -107,6 +107,30 @@ class WikipediaGraphConnector:
                 # add the next set depth-first edge
                 self.__add_nodes_edges_recursively(parent=nxn, links=nxn.get_properties()["links"], depth=depth-1)
 
+    def add_edges(self, edges: list[tuple(str, str)]):
+        """
+        method to add edges to the graph
+        Note that an edge can only be added a directed link connects the two nodes
+        
+        params:
+        edges: a list of tuples of length 2 (from, to)
+        
+        return:
+        None
+        """
+
+        # add edge only if a link exists from the first node to the second (and if the nodes exist)
+        for edge in edges:
+            # check the nodes
+            if self.graph.has_node(edge[0]) and self.graph.has_node(edge[1]):
+                # check that link exists (1 -> 2)
+                if edge[1] in self.graph.node[edge[0]]["links"]:
+                    self.graph.add_edge(node1=edge[0], node2=edge[1])
+                else:
+                    raise self.LinkDoesNotExistError(f"The link from {edge[0]} to {edge[1]} does not exist")
+            else:
+                raise self.NodeDoesNotExistError(f"At least one of the nodes specified in {edge} does not exist")
+
     class WikiNode:
         """
         author: Sakin Kirti and Smyan Thota
@@ -165,3 +189,19 @@ class WikipediaGraphConnector:
             """
             
             return self.properties
+
+    class NodeDoesNotExistError(KeyError):
+        """
+        custom error for when a Node does not exist
+        exteds KeyError
+        """
+
+        pass
+
+    class LinkDoesNotExistError(ValueError):
+        """
+        custom error for when a link between two articles does not exist
+        exteds ValueError
+        """
+
+        pass
