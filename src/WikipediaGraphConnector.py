@@ -1,5 +1,9 @@
 from neo4j import GraphDatabase
-import nxneo4j as nx
+from neo4j import graph
+import nxneo4j as nxn
+import networkx as nx
+import random
+import time
 
 from WikipediaParser import WikipediaParser as WP
 
@@ -29,7 +33,10 @@ class WikipediaGraphConnector:
 
         # create connection to db
         self.driver = self.db_connect(username, password, url)
-        self.graph = nx.DiGraph(self.driver)
+        self.graph = nxn.DiGraph(self.driver)
+
+        # random seed
+        random.seed(1234)
 
     def db_connect(self, username, password, url):
         """
@@ -59,7 +66,7 @@ class WikipediaGraphConnector:
 
         self.driver.close()
 
-    def add_nodes(self, nodes: list[str], add_links: bool=False, depth: int=0):
+    def add_nodes(self, nodes: list[str], add_links: bool=False, depth: int=0, max_nodes:int=10):
         """
         method to add nodes and edges to the graph
         
@@ -74,15 +81,22 @@ class WikipediaGraphConnector:
 
         # add the nodes to the graph
         for n in nodes:
-            if self.graph.has_node(n) == False:
-                nxn = self.WikiNode(n)
-                self.graph.add_node(nxn.get_title(), nxn.get_properties())
+            print("starting new root")
+            # check if graph has the node already
+            nxn_node = self.WikiNode(n)
+
+            # if node was parse properly
+            if nxn_node.get_title() != "flag" or nxn_node.get_properties() != "flag":
+                self.graph.add_node(nxn_node.get_title(), nxn_node.get_properties())
+                print(f"added node {nxn_node.get_title()}")
 
                 # if add_edges is True, add edges (+ new nodes) recursively
                 if add_links == True:
-                    self.__add_nodes_edges_recursively(node=nxn, links=nxn.get_properties()["links"], depth=depth)
+                    self.__add_nodes_edges_recursively(parent=nxn_node, links=nxn_node.get_properties()["links"], depth=depth-1, max_nodes=max_nodes)
 
-    def __add_nodes_edges_recursively(self, parent: any, links: list[str], depth: int):
+        print("Done adding nodes")
+
+    def __add_nodes_edges_recursively(self, parent: any, links: list[str], depth: int, max_nodes:int):
         """
         method to add nodes and edges recursively
         
@@ -95,20 +109,32 @@ class WikipediaGraphConnector:
         None
         """
 
+        # shuffle the link order (out of alphabetical)
+        random.shuffle(links)
+
         # add the link nodes and link to its parent
         if depth > 0:
             # add link nodes
-            for l in links:
-                nxn = self.WikiNode(l)
-                self.graph.add_node(nxn.get_title(), nxn.get_properties())
+            max = len(links) if len(links) < 10 else 10
+            for i in range(max):
+                # add the nodes/edges
+                nxn_node = self.WikiNode(links[i])
 
-                # add the appropriate edge
-                self.graph.add_edge(parent.get_title(), nxn.get_title())
+                # if node was parse properly
+                if nxn_node.get_title() != "flag" or nxn_node.get_properties() != "flag":
+                    self.graph.add_node(nxn_node.get_title(), nxn_node.get_properties())
+                    print(f"depth: {depth}, added node: {nxn_node.get_title()}")
 
-                # add the next set depth-first edge
-                self.__add_nodes_edges_recursively(parent=nxn, links=nxn.get_properties()["links"], depth=depth-1)
+                    # add the appropriate edge
+                    self.graph.add_edge(parent.get_title(), nxn_node.get_title())
 
-    def add_edges(self, edges: list[tuple(str, str)]):
+                    # add the next set depth-first edge
+                    self.__add_nodes_edges_recursively(parent=nxn_node, links=nxn_node.get_properties()["links"], depth=depth-1, max_nodes=max_nodes)
+            time.sleep(10)
+
+        return True
+
+    def add_edges(self, edges: list):
         """
         method to add edges to the graph
         Note that an edge can only be added a directed link connects the two nodes
@@ -146,8 +172,8 @@ class WikipediaGraphConnector:
 
         # check if node exists, then add edges
         if self.graph.has_node(node):
-            nxn = self.WikiNode(node)
-            self.__add_nodes_edges_recursively(parent=nxn, links=nxn.get_properties()["links"], depth=depth)
+            nxn_node = self.WikiNode(node)
+            self.__add_nodes_edges_recursively(parent=nxn_node, links=nxn_node.get_properties()["links"], depth=depth)
         else:
             raise self.NodeDoesNotExistError(f"The noode {node} does not exist")
 
@@ -162,7 +188,7 @@ class WikipediaGraphConnector:
         None
         """
 
-        nx.draw(self.graph)
+        nxn.draw(self.graph)
 
     def get_nodes(self):
         """
@@ -188,7 +214,7 @@ class WikipediaGraphConnector:
         set - the set of nodes
         """
 
-        return nx.descendants(self.graph, node)
+        return nxn.descendants(self.graph, node)
 
     def find_neighbors(self, node: str):
         """
@@ -216,6 +242,40 @@ class WikipediaGraphConnector:
 
         return nx.ancestors(self.graph, node)
 
+    def to_networkx(self):
+        """
+        convert the nxneo4j graph to networkx graph
+
+        params:
+        node: str - the node to start the query from
+        depth: int - the depth to return graph for
+            if depth=0 just the node is returned
+
+        return:
+        networkx.DiGraph - the graph in networkx format
+        """
+
+        # define the query
+        query = """
+            MATCH (n)-[r]->(m)
+            RETURN n,r,m
+        """
+
+        # run the query
+        res = self.driver.session().run(query)
+        nx_graph = nx.DiGraph()
+
+        # add nodes and edges to nx_graph
+        nodes = list(res.graph()._nodes.values())
+        for node in nodes:
+            nx_graph.add_node(node.id, labels=node._labels, properties=node._properties)
+        rels = list(res.graph()._relationships.values())
+        for rel in rels:
+            nx_graph.add_edge(rel.start_node.id, rel.end_node.id, key=rel.id, type=rel.type, properties=rel._properties)
+
+        # return
+        return nx_graph
+
     class WikiNode:
         """
         author: Sakin Kirti and Smyan Thota
@@ -240,14 +300,17 @@ class WikipediaGraphConnector:
             self.article_title = title
 
             # get the properties of the article
-            self.page = WP.parse_wikipedia(term=title)
-            self.properties = {
-                "categories" : self.page.categories,
-                "summary" : self.page.summary,
-                "references" : self.page.references,
-                "images" : self.page.images,
-                "links" : self.page.links
-            }
+            try:
+                self.page = WP.parse_wikipedia(term=title)
+                self.properties = {
+                    "summary" : self.page.summary,
+                    "references" : self.page.references,
+                    "links" : self.page.links
+                }
+            except:
+                print(f"Error: Could not parse wikipedia: {self.article_title}")
+                self.article_title = "flag"
+                self.properties = "flag"
 
         def get_title(self):
             """
