@@ -1,3 +1,0 @@
-uri neo4j+s://1d990c5b.databases.neo4j.io
-user neo4j
-pass OZQERmHm1vdC0A1Z7oPD0-SQwDhtDpz_Nqtud8DHaA4
